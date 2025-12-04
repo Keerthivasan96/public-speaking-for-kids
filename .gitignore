@@ -83,3 +83,4 @@ frontend/*.log
 *.key
 *.crt
 *.pid
+backend/.env
