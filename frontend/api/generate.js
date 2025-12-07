@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     }
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
-    const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash-exp";
     const GEMINI_AUTH_TYPE = (process.env.GEMINI_AUTH_TYPE || "key").toLowerCase(); // "key" or "bearer"
 
     if (!GEMINI_KEY) {
