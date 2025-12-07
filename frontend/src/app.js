@@ -5,7 +5,7 @@
 import { startListening, stopListening } from "./speech.js";
 import { avatarStartTalking, avatarStopTalking } from "./threejs-avatar.js";
 
-const API_URL = "http://localhost:4000/api/chat";
+const API_URL = "/api/generate"; // <- updated to call serverless proxy on Vercel
 
 // UI ELEMENTS
 const micBtn = document.getElementById("micBtn");
@@ -234,7 +234,7 @@ function extractCorrection(userText, aiResponse) {
   const patterns = [
     /(?:should say|correct (?:way|version|sentence) is?|better to say|try saying|say it (?:like|as))[:\s]*["']([^"']+)["']/i,
     /(?:say|use)[:\s]*["']([^"']+)["']\s*instead/i,
-    /instead[,\s]+(?:say|use|try)[:\s]*["']([^"']+)["']/i,
+    /instead[,\s]+(?:say|use|try)[:\s]*["']([^"']+)["']\s*instead/i,
     /["']([^"']+)["']\s+is (?:better|correct|more natural|proper)/i,
     /correct(?:ed)?[:\s]*["']([^"']+)["']/i,
     /(?:use|say)\s+["']?(\w+)["']?\s+instead/i,
