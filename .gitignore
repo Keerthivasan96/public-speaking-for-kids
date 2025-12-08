@@ -88,3 +88,4 @@ backend/.env
 # Local reference / temp
 ############################
 other_ref/
+node_modules/
