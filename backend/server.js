@@ -98,6 +98,125 @@ app.post("/api/chat", async (req, res) => {
       .status(400)
       .json({ ok: false, error: "Missing 'prompt' in request body." });
   }
+// Helper extracted from /api/chat logic so we can reuse it for /api/generate
+async function handleChatRequest(req, res) {
+  const prompt = req.body?.prompt ?? req.body?.text;
+  if (!prompt || typeof prompt !== "string") {
+    return res
+      .status(400)
+      .json({ ok: false, error: "Missing 'prompt' in request body." });
+  }
+
+  // Gemini path
+  if (process.env.GEMINI_API_KEY) {
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const baseUrl =
+      process.env.GEMINI_API_URL ||
+      "https://generativelanguage.googleapis.com/v1beta";
+    const endpoint = `${baseUrl}/models/${encodeURIComponent(
+      model
+    )}:generateContent`;
+
+    try {
+      const body = {
+        contents: [
+          {
+            parts: [{ text: prompt }],
+            role: "user",
+          },
+        ],
+      };
+
+      const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const json = await resp.json().catch(() => null);
+
+      if (!resp.ok) {
+        console.error("Gemini API error", resp.status, json);
+        return res.status(502).json({
+          ok: false,
+          error: "Gemini API error",
+          status: resp.status,
+          body: json,
+        });
+      }
+
+      const reply = extractTextFromResponse(json);
+      return res.json({ ok: true, reply: String(reply) });
+    } catch (err) {
+      console.error("Error calling Gemini:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Server error calling Gemini",
+        details: String(err),
+      });
+    }
+  }
+
+  // OpenAI path
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
+      const resp = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+            max_tokens: 800,
+          }),
+        }
+      );
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => "");
+        console.error("OpenAI API error:", resp.status, text);
+        return res.status(502).json({
+          ok: false,
+          error: "OpenAI API returned an error",
+          status: resp.status,
+          body: text,
+        });
+      }
+
+      const data = await resp.json();
+      const reply = extractTextFromResponse(data);
+
+      return res.json({ ok: true, reply: String(reply) });
+    } catch (err) {
+      console.error("Error calling OpenAI:", err);
+      return res.status(500).json({
+        ok: false,
+        error: "Server error calling OpenAI",
+        details: String(err),
+      });
+    }
+  }
+
+  return res.status(500).json({
+    ok: false,
+    error:
+      "No LLM provider configured. Set GEMINI_API_KEY or OPENAI_API_KEY in backend/.env",
+  });
+}
+
+// Add /api/generate that reuses the same logic (so frontend can keep calling /api/generate)
+app.post("/api/generate", async (req, res) => {
+  return handleChatRequest(req, res);
+});
 
   // ---------- Gemini Provider ----------
   if (process.env.GEMINI_API_KEY) {
